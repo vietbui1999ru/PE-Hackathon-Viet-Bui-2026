@@ -37,7 +37,6 @@ jobs:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@v5
       - run: uv sync
-      - run: createdb hackathon_db
       - run: uv run python -m app.scripts.init_db
       - run: uv run python -m app.scripts.load_data
       - run: uv run pytest --cov=app --cov-report=term-missing --cov-fail-under=50
