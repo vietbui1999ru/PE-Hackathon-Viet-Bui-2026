@@ -10,6 +10,15 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
       postgres:
         image: postgres:16
         env:
@@ -30,6 +39,7 @@ jobs:
       DATABASE_PASSWORD: postgres
       DATABASE_HOST: localhost
       DATABASE_PORT: 5432
+      REDIS_URL: redis://localhost:6379
 
     steps:
       - uses: actions/checkout@v4
@@ -41,11 +51,22 @@ jobs:
       - run: uv run python -m app.scripts.init_db
       - run: uv run python -m app.scripts.load_data
       - name: Install k6
-        uses: grafana/setup-k6-action@v1
 
+        uses: grafana/setup-k6-action@v1
+      - run: |
+          uv run python -c "
+          from app import create_app
+          from app.database import db
+          app = create_app()
+          with app.app_context():
+              db.execute_sql(\"SELECT setval('users_id_seq', (SELECT MAX(id) FROM users))\")
+              db.execute_sql(\"SELECT setval('urls_id_seq', (SELECT MAX(id) FROM urls))\")
+              db.execute_sql(\"SELECT setval('events_id_seq', (SELECT MAX(id) FROM events))\")
+          "
       - name: Start app
+
         run: |
           uv run gunicorn -w 2 -b 0.0.0.0:5000 "app:create_app()" &
-          sleep 3
+          sleep 5
       - name: Run load test
         run: k6 run --vus 50 --duration 15s k6/load_test.js
