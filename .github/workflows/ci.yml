@@ -13,9 +13,9 @@ jobs:
       postgres:
         image: postgres:latest
         env:
-          POSTGRES_USER: hackathon_db
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
+          POSTGRES_DB: hackathon_db
         ports:
           - 5432:5432
         options: >-
@@ -25,18 +25,19 @@ jobs:
             --health-retries 5
     env:
       DATABASE_NAME: hackathon_db
-      DATABASE_USER: hackathon_db
+      DATABASE_USER: postgres
       DATABASE_PASSWORD: postgres
       DATABASE_HOST: localhost
       DATABASE_PORT: 5432
 
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v1
       - uses: actions/setup-python@v4
         with:
           python-version: "3.13"
+      - uses: astral-sh/setup-uv@v5
       - run: uv sync
+      - run: createdb hackathon_db
       - run: uv run python -m app.scripts.init_db
       - run: uv run python -m app.scripts.load_data
       - run: uv run pytest --cov=app --cov-report=term-missing --cov-fail-under=50
