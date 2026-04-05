@@ -40,7 +40,10 @@ def create_event():
         return jsonify({"error": "url_id and user_id must be integers"}), 400
 
     details_data = json.dumps(data.get("details", {}))
-    event = Event.create(url_id=url_id, user_id=user_id, event_type=data["event_type"], timestamp=datetime.now(timezone.utc), details=details_data)
+    try:
+        event = Event.create(url_id=url_id, user_id=user_id, event_type=data["event_type"], timestamp=datetime.now(timezone.utc), details=details_data)
+    except IntegrityError:
+        return jsonify({"error": "Event already exists"}), 409
     return jsonify(model_to_dict(event)), 201
 
 @events_bp.route("/events/<int:event_id>", methods=["GET"])

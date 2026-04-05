@@ -107,14 +107,12 @@ def bulk_load_urls():
 
 @urls_bp.route("/urls/<string:short_code>/redirect", methods=["GET"])
 def redirect_url(short_code):
-    url = Url.get_or_none(Url.short_code == short_code, Url.is_active == True)
+    url = Url.get_or_none((Url.short_code == short_code) & (Url.is_active == True))
     if not url:
         return jsonify({"error": "not found"}), 404
 
-    if not url.is_active:
-        return jsonify({"error": "url is not active"}), 404
 
-    details_data = json.dumps(data.get("details", {}))
+    details_data = json.dumps(request.headers.get("Referer", ""))
 
     Event.create(url_id=url.id, user_id=url.user_id, event_type="click", timestamp=datetime.now(timezone.utc), details=details_data)
 
