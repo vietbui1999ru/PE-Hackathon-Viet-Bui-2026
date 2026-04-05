@@ -5,6 +5,8 @@ from playhouse.shortcuts import model_to_dict
 
 from app.models.events import Event
 
+from peewee import IntegrityError
+
 import json
 
 events_bp = Blueprint("events", __name__)

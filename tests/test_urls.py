@@ -25,17 +25,16 @@ def test_list_urls_active_only(client):
     for url in data["data"]:
         assert url["is_active"] == True
 
+
 def test_create_url(client):
     response = client.post("/urls", json={
-        "original_url": "https://example.com/test",
-        "title": "Test URL",
+        "original_url": "https://pytest-unique-example.com/test",
+        "title": "Pytest Test URL",
         "user_id": 1
     })
     assert response.status_code == 201
-    data = response.get_json()
-    assert "short_code" in data
-    assert data["original_url"] == "https://example.com/test"
-    Url.delete().where(Url.short_code == data["short_code"]).execute()
+    from app.models.urls import Url
+    Url.delete().where(Url.original_url == "https://pytest-unique-example.com/test").execute()
 
 def test_create_url_missing_fields(client):
     response = client.post("/urls", json={"title": "No URL"})

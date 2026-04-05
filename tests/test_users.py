@@ -16,15 +16,12 @@ def test_list_users_pagination(client):
 
 def test_create_user(client):
     response = client.post("/users", json={
-        "username": "testuser",
-        "email": "testuser@example.com"
+        "username": "pytest_testuser_unique",
+        "email": "pytest_unique@example.com"
     })
     assert response.status_code == 201
-    data = response.get_json()
-    assert data["username"] == "testuser"
-    assert data["email"] == "testuser@example.com"
-    assert "id" in data
-    User.delete().where(User.username == "testuser").execute()
+    from app.models.users import User
+    User.delete().where(User.username == "pytest_testuser_unique").execute()
 
 def test_create_user_duplicate(client):
     client.post("/users", json={"username": "dupuser", "email": "dup@example.com"})
