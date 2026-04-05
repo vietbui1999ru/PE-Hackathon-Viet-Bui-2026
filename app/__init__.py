@@ -10,7 +10,6 @@ def create_app():
 
     app = Flask(__name__)
 
-    init_db(app)
 
     from app import models  # noqa: F401 - registers models with Peewee
 
@@ -19,5 +18,7 @@ def create_app():
     @app.route("/health")
     def health():
         return jsonify(status="ok")
+
+    init_db(app)
 
     return app
