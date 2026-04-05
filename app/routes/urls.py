@@ -1,3 +1,4 @@
+import uuid
 from flask.globals import request
 from flask import Blueprint, jsonify
 from playhouse.shortcuts import model_to_dict
@@ -21,10 +22,17 @@ def list_urls():
 @urls_bp.route("/urls", methods=["POST"])
 def create_url():
     data = request.get_json()
-    if not data or "url" not in data:
-        return jsonify({"error": "url is required"}), 400
+    if not data or "original_url" not in data or "user_id" not in data:
+            return jsonify({"error": "original url is required, user id is required"}), 400
+        # check short code exist in database, return 400 alrady exist
+    if "short_code" in data:
+        if Url.get_or_none(Url.short_code == data["short_code"]):
+            return jsonify({"error": "short code already exist"}), 400
 
-    url = Url.create(url=data["url"])
+    url = Url.create(original_url=data["original_url"], 
+                     title=data["title"] if "title" in data else None,
+                     user_id=data["user_id"] if "user_id" in data else None,
+                     short_code=uuid.uuid4().hex[:8] if "short_code" not in data else data["short_code"])
     return jsonify(model_to_dict(url)), 201
 
 @urls_bp.route("/urls/<int:url_id>", methods=["GET"])
