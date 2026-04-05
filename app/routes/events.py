@@ -69,11 +69,12 @@ def delete_event(event_id):
 
 @events_bp.route("/events/bulk", methods=["POST"])
 def bulk_load_events():
-    data = request.get_json()
     import os
     filepath = os.path.join(os.path.dirname(__file__), "..", "data", "events.csv")
-    if not filepath:
+    if not os.path.exists(filepath):
         return jsonify({"error": "File not found"}), 404
     from app.services.data_loader import load_events
+    from app.database import db
     load_events(filepath)
-    return jsonify({"status": "loaded"}), 201
+    db.execute_sql("SELECT setval('events_id_seq', (SELECT MAX(id) FROM events))")
+    return jsonify({"status": "loaded"}), 200

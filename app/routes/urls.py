@@ -68,11 +68,12 @@ def delete_url(url_id):
 @urls_bp.route("/urls/bulk", methods=["POST"])
 
 def bulk_load_urls():
-    data = request.get_json()
     import os
     filepath = os.path.join(os.path.dirname(__file__), "..", "data", "urls.csv")
-    if not filepath:
+    if not os.path.exists(filepath):
         return jsonify({"error": "File not found"}), 404
     from app.services.data_loader import load_urls
+    from app.database import db
     load_urls(filepath)
-    return jsonify({"status": "loaded"}), 201
+    db.execute_sql("SELECT setval('urls_id_seq', (SELECT MAX(id) FROM urls))")
+    return jsonify({"status": "loaded"}), 200

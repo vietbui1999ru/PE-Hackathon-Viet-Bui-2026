@@ -74,11 +74,12 @@ def delete_user(user_id):
 @users_bp.route("/users/bulk", methods=["POST"])
 
 def bulk_load_users():
-    data = request.get_json()
     import os
     filepath = os.path.join(os.path.dirname(__file__), "..", "data", "users.csv")
-    if not filepath:
+    if not os.path.exists(filepath):
         return jsonify({"error": "File not found"}), 404
     from app.services.data_loader import load_users
+    from app.database import db
     load_users(filepath)
+    db.execute_sql("SELECT setval('users_id_seq', (SELECT MAX(id) FROM users))")
     return jsonify({"status": "loaded"}), 200
