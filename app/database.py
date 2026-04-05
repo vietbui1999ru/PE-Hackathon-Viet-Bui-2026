@@ -18,7 +18,7 @@ Return : variables : str
 def require_env(environment : str) -> str:
     variables = os.environ.get(environment)
     if variables is None or variables.strip() == "":
-        raise RuntimeError(f"Missing required environment variables: {environment}")
+        raise RuntimeError(f"Missing required environment variable: {environment}")
     return variables
 
 def init_db(app):
