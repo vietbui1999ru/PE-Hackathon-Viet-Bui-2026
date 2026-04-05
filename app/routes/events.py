@@ -22,6 +22,13 @@ def list_events():
 @events_bp.route("/events", methods=["POST"])
 def create_event():
     data = request.get_json()
+
+    try:
+        data["url_id"] = int(data["url_id"])
+        data["user_id"] = int(data["user_id"])
+    except ValueError:
+        return jsonify({"error": "url_id and user_id must be integers"}), 400
+
     if not data or "url_id" not in data or "user_id" not in data or "event_type" not in data or "timestamp" not in data or "details" not in data:
         return jsonify({"error": "url_id, user_id, event_type, timestamp and details are required"}), 400
 

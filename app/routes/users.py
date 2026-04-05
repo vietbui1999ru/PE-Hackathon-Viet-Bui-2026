@@ -27,6 +27,14 @@ Create new user
 @users_bp.route("/users", methods=["POST"])
 def create_user():
     data = request.get_json()
+    
+    try:
+        data["username"] = str(data["username"])
+        data["email"] = str(data["email"])
+    except ValueError:
+        return jsonify({"error": "username and email must be strings"}), 400
+
+
     if not data or "username" not in data or "email" not in data:
         return jsonify({"error": "username and email are required"}), 400
 

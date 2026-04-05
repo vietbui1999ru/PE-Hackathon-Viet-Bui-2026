@@ -25,6 +25,16 @@ def list_urls():
 @urls_bp.route("/urls", methods=["POST"])
 def create_url():
     data = request.get_json()
+
+    try:
+        data["user_id"] = int(data["user_id"])
+    except ValueError:
+        return jsonify({"error": "user_id must be an integer"}), 400
+
+    if not data or "original_url" not in data:
+        return jsonify({"error": "Missing required fields"}), 400
+    if not data["original_url"].startswith("http://") and not data["original_url"].startswith("https://"):
+        return jsonify({"error": "Invalid url"}), 400
     if not data or "original_url" not in data or "user_id" not in data:
             return jsonify({"error": "original url is required, user id is required"}), 400
         # check short code exist in database, return 400 alrady exist
@@ -87,10 +97,15 @@ def bulk_load_urls():
     return jsonify({"status": "loaded"}), 200
 
 @urls_bp.route("/urls/<string:short_code>/redirect", methods=["GET"])
-
 def redirect_url(short_code):
-    from flask import redirect
     url = Url.get_or_none(Url.short_code == short_code, Url.is_active == True)
     if not url:
         return jsonify({"error": "not found"}), 404
+
+    if not url.is_active:
+        return jsonify({"error": "url is not active"}), 404
+
+    Event.create(url_id=url.id, user_id=url.user_id, event_type="click", timestamp=datetime.now(timezone.utc), details=request.headers.get("Referer", ""))
+
+    from flask import redirect
     return redirect(url.original_url, code=302)
