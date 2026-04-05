@@ -1,8 +1,8 @@
 import pytest
 from app import create_app
+from app.database import db
 
 @pytest.fixture()
-
 def app():
     """App for testing."""
     app = create_app()
@@ -15,3 +15,6 @@ def app():
 def client(app):
     """Test client for app."""
     return app.test_client()
+
+
+

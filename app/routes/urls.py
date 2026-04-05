@@ -30,30 +30,23 @@ def list_urls():
 @urls_bp.route("/urls", methods=["POST"])
 def create_url():
     data = request.get_json()
-
-    try:
-        data["user_id"] = int(data["user_id"])
-    except ValueError:
-        return jsonify({"error": "user_id must be an integer"}), 400
-
-    if not data or "original_url" not in data:
-        return jsonify({"error": "Missing required fields"}), 400
+    if not data or "original_url" not in data or "user_id" not in data:
+        return jsonify({"error": "original_url and user_id are required"}), 400
     if not data["original_url"].startswith("http://") and not data["original_url"].startswith("https://"):
         return jsonify({"error": "Invalid url"}), 400
-    if not data or "original_url" not in data or "user_id" not in data:
-            return jsonify({"error": "original url is required, user id is required"}), 400
-        # check short code exist in database, return 400 alrady exist
-    if "short_code" in data:
-        if Url.get_or_none(Url.short_code == data["short_code"] and Url.is_active == True):
-            return jsonify({"error": "short code already exist"}), 400
-
     try:
-        url = Url.create(original_url=data["original_url"], 
-                     title=data["title"] if "title" in data else None,
-                     user_id=data["user_id"] if "user_id" in data else None,
-                     short_code=uuid.uuid4().hex[:8] if "short_code" not in data else data["short_code"])
+        user_id = int(data["user_id"])
+    except (ValueError, TypeError):
+        return jsonify({"error": "user_id must be an integer"}), 400
+    try:
+        url = Url.create(
+            original_url=data["original_url"],
+            title=data.get("title"),
+            user_id=user_id,
+            short_code=data.get("short_code", uuid.uuid4().hex[:8])
+        )
     except IntegrityError:
-        return jsonify({"error": "Url already exists"}), 409
+        return jsonify({"error": "short_code already exists"}), 409
     return jsonify(model_to_dict(url)), 201
 
 @urls_bp.route("/urls/<int:url_id>", methods=["GET"])
