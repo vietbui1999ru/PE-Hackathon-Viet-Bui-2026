@@ -75,7 +75,7 @@ def delete_user(user_id):
 
 def bulk_load_users():
     import os
-    filepath = os.path.join(os.path.dirname(__file__), "..", "data", "users.csv")
+    filepath = os.path.join(os.path.dirname(__file__), "..", "..", "data", "users.csv")
     if not os.path.exists(filepath):
         return jsonify({"error": "File not found"}), 404
     from app.services.data_loader import load_users

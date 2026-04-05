@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import uuid
 from flask.globals import request
 from flask import Blueprint, jsonify
@@ -50,9 +51,14 @@ def update_url(url_id):
         return jsonify({"error": "Url not found"}), 404
 
     update_data = request.get_json()
-    if "url" in update_data:
-        data.url = update_data["url"]
+    if "original_url" in update_data:
+        data.original_url = update_data["original_url"]
+    if "title" in update_data:
+        data.title = update_data["title"]
+    if "is_active" in update_data:
+        data.is_active = update_data["is_active"]
 
+    data.updated_at = datetime.now(timezone.utc)
     data.save()
     return jsonify(model_to_dict(data)), 200
 
@@ -69,7 +75,7 @@ def delete_url(url_id):
 
 def bulk_load_urls():
     import os
-    filepath = os.path.join(os.path.dirname(__file__), "..", "data", "urls.csv")
+    filepath = os.path.join(os.path.dirname(__file__), "..", "..","data", "urls.csv")
     if not os.path.exists(filepath):
         return jsonify({"error": "File not found"}), 404
     from app.services.data_loader import load_urls

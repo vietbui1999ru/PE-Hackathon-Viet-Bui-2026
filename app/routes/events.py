@@ -70,7 +70,7 @@ def delete_event(event_id):
 @events_bp.route("/events/bulk", methods=["POST"])
 def bulk_load_events():
     import os
-    filepath = os.path.join(os.path.dirname(__file__), "..", "data", "events.csv")
+    filepath = os.path.join(os.path.dirname(__file__), ".." , "..", "data", "events.csv")
     if not os.path.exists(filepath):
         return jsonify({"error": "File not found"}), 404
     from app.services.data_loader import load_events
