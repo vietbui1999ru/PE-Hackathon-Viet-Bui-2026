@@ -89,5 +89,7 @@ def bulk_load_users():
     from app.services.data_loader import load_users
     from app.database import db
     load_users(filepath)
-    db.execute_sql("SELECT setval('users_id_seq', (SELECT MAX(id) FROM users))")
+    from app.database import db
+    if os.environ.get("DATABASE_NAME"):  # postgres only
+        db.execute_sql("SELECT setval('users_id_seq', (SELECT MAX(id) FROM users))")
     return jsonify({"status": "loaded"}), 200

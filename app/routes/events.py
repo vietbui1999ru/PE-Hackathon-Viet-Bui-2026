@@ -1,5 +1,4 @@
-import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from flask.globals import request
 from flask import Blueprint, jsonify
 from playhouse.shortcuts import model_to_dict

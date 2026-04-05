@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify
 from playhouse.shortcuts import model_to_dict
 
 from app.models.urls import Url
+from app.models.events import Event
 
 urls_bp = Blueprint("urls", __name__)
 
