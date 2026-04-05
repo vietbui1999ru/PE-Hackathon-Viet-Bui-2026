@@ -5,15 +5,14 @@ from playhouse.shortcuts import model_to_dict
 
 from app.models.events import Event
 
+import json
+
 events_bp = Blueprint("events", __name__)
 
 
 @events_bp.route("/events")
 def list_events():
-    # add pagination later
     events = Event.select()
-    if pages and per_page:
-        events = events.paginate(pages, per_page)
 
     if request.args.get("user_id"):
         user_id = request.args.get("user_id")
@@ -40,7 +39,8 @@ def create_event():
     except (ValueError, TypeError):
         return jsonify({"error": "url_id and user_id must be integers"}), 400
 
-    event = Event.create(url_id=url_id, user_id=user_id, event_type=data["event_type"], timestamp=datetime.now(timezone.utc), details=str(data.get("details", "")))
+    details_data = json.dumps(data.get("details", {}))
+    event = Event.create(url_id=url_id, user_id=user_id, event_type=data["event_type"], timestamp=datetime.now(timezone.utc), details=details_data)
     return jsonify(model_to_dict(event)), 201
 
 @events_bp.route("/events/<int:event_id>", methods=["GET"])

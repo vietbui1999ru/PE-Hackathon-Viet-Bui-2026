@@ -9,6 +9,8 @@ from app.models.events import Event
 
 from peewee import IntegrityError
 
+import json
+
 urls_bp = Blueprint("urls", __name__)
 
 
@@ -42,7 +44,7 @@ def create_url():
             return jsonify({"error": "original url is required, user id is required"}), 400
         # check short code exist in database, return 400 alrady exist
     if "short_code" in data:
-        if Url.get_or_none(Url.short_code == data["short_code"]):
+        if Url.get_or_none(Url.short_code == data["short_code"] and Url.is_active == True):
             return jsonify({"error": "short code already exist"}), 400
 
     try:
@@ -112,7 +114,9 @@ def redirect_url(short_code):
     if not url.is_active:
         return jsonify({"error": "url is not active"}), 404
 
-    Event.create(url_id=url.id, user_id=url.user_id, event_type="click", timestamp=datetime.now(timezone.utc), details=request.headers.get("Referer", ""))
+    details_data = json.dumps(data.get("details", {}))
+
+    Event.create(url_id=url.id, user_id=url.user_id, event_type="click", timestamp=datetime.now(timezone.utc), details=details_data)
 
     from flask import redirect
     return redirect(url.original_url, code=302)
