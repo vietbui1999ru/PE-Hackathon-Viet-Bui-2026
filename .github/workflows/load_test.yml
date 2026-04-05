@@ -40,8 +40,9 @@ jobs:
       - run: uv sync
       - run: uv run python -m app.scripts.init_db
       - run: uv run python -m app.scripts.load_data
-      - name: Install k
-        uses: grafana/setup-k6-action@v16
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+
       - name: Start app
         run: |
           uv run gunicorn -w 2 -b 0.0.0.0:5000 "app:create_app()" &
