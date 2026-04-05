@@ -1,0 +1,17 @@
+
+global:
+  scrape_interval: 15s
+
+alerting:
+alertmanagers:
+  - static_configs:
+      - targets: ['alertmanager:9093']
+
+rule_files:
+  - alerts.yml
+
+scrape_configs:
+  - job_name: 'flask'
+    static_configs:
+      - targets: ['app1:5000', 'app2:5000', 'app3:5000',
+                  'app4:5000', 'app5:5000', 'app6:5000']
