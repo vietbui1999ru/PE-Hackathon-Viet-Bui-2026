@@ -1,5 +1,5 @@
-import pytest
 from app.database import require_env
+import pytest
 
 """
 Function to test and assert against environment database name.
@@ -11,7 +11,7 @@ Expect to return success and true.
 
 monkeypatch : pytest fixture built-in tool
 """
-def test_require_env_success(monkeypatch):
+def test_env_success(monkeypatch):
     monkeypatch.setenv("DATABASE_NAME", "test_db")
     assert require_env("DATABASE_NAME") == "test_db"
 
@@ -25,8 +25,9 @@ Expect to return False Raise Error and issue of missing environment.
 
 monkeypatch : pytest fixture built-in tool
 """
-def test_require_env_missing(monkeypatch):
+def test_env_missing(monkeypatch):
     monkeypatch.delenv("DATABASE_NAME", raising=False)
+
     # test expected failures. Code must raise rntime error (true negatives). else test fails (false negatives)
-with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError):
         require_env("DATABASE_NAME")
