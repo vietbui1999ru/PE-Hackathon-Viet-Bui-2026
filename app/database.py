@@ -1,6 +1,7 @@
 import os
 
-from peewee import DatabaseProxy, Model, PostgresqlDatabase, SqliteDatabase
+from peewee import DatabaseProxy, Model, SqliteDatabase
+from playhouse.pool import PooledPostgresqlDatabase
 
 db = DatabaseProxy()
 
@@ -29,8 +30,10 @@ def init_db(app):
     db_port = int(os.environ.get("DATABASE_PORT", 5432))
 
     if db_name and db_user and db_password:
-        database = PostgresqlDatabase(
+        database = PooledPostgresqlDatabase(
             db_name,
+            max_connections=15,
+            stale_timeout=300,
             host=db_host,
             port=db_port,
             user=db_user,

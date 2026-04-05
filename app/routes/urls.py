@@ -1,3 +1,4 @@
+from redis.backoff import default_backoff
 from datetime import datetime, timezone
 import uuid
 from flask.globals import request
@@ -9,10 +10,19 @@ from app.models.events import Event
 
 from peewee import IntegrityError
 
+#caching
+import redis
 import json
+import os
 
 urls_bp = Blueprint("urls", __name__)
 
+
+redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+
+redis_client = redis.ConnectionPool.from_url(redis_url, max_connections=100, retry_on_timeout=True, socket_connect_timeout=30, socket_timeout=30)
+
+r = redis.Redis(connection_pool=redis_client)
 
 @urls_bp.route("/urls", methods=["GET"])
 def list_urls():
@@ -51,11 +61,20 @@ def create_url():
 
 @urls_bp.route("/urls/<int:url_id>", methods=["GET"])
 def get_url(url_id):
+    # create key for cache map
+    cache_key = f"url_{url_id}"
+    cached = r.get(cache_key)
+    if cached:
+        return jsonify(json.loads(cached)), 200 
     data = Url.get_or_none(Url.id == url_id)
     if not data:
         return jsonify({"error": "Url not found"}), 404
 
-    return jsonify(model_to_dict(data)), 200
+    data = model_to_dict(data)
+    # expiry in 60 seconds
+    r.setex(cache_key, 60, json.dumps(data, default=str))
+
+    return jsonify(data), 200
 
 @urls_bp.route("/urls/<int:url_id>", methods=["PUT"])
 def update_url(url_id):

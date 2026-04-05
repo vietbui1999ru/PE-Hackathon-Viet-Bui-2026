@@ -3,4 +3,4 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 COPY . .
 RUN uv sync
-CMD ["uv", "run", "run.py"]
+CMD ["uv", "run", "gunicorn", "-w", "4", "--threads", "2", "-b", "0.0.0.0:5000", "app:create_app()"]
