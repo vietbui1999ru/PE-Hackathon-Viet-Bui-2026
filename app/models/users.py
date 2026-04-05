@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from peewee import CharField, DateTimeField
 
 from app.database import BaseModel
