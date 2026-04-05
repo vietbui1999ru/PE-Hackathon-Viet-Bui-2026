@@ -20,7 +20,7 @@ def list_urls():
         user_id = request.args.get("user_id")
         query = query.where(Url.user_id == int(user_id))
     # model_to_dict return controlled fields for each u in urls
-    return jsonify({"data" : [model_to_dict(u) for u in urls_query]})
+    return jsonify({"data" : [model_to_dict(u) for u in query]})
 
 @urls_bp.route("/urls", methods=["POST"])
 def create_url():
