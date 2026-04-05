@@ -1,3 +1,4 @@
+from app.models.events import Event
 def test_get_events_list(client):
     response = client.get("/events")
     assert response.status_code == 200
