@@ -1,5 +1,12 @@
+networks:
+  monitoring:
+    driver: bridge
+
 services:
   prometheus:
+    networks:
+      - default
+      - monitoring
     image: prom/prometheus
     ports:
       - "9090:9090"
