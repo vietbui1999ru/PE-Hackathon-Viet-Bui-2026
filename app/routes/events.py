@@ -1,3 +1,5 @@
+import datetime
+from datetime import timezone
 from flask.globals import request
 from flask import Blueprint, jsonify
 from playhouse.shortcuts import model_to_dict
@@ -22,17 +24,15 @@ def list_events():
 @events_bp.route("/events", methods=["POST"])
 def create_event():
     data = request.get_json()
-
+    if not data or "url_id" not in data or "user_id" not in data or "event_type" not in data:
+        return jsonify({"error": "Missing required fields for url_id, user_id, and event_type"}), 400
     try:
-        data["url_id"] = int(data["url_id"])
-        data["user_id"] = int(data["user_id"])
-    except ValueError:
+        url_id = int(data["url_id"])
+        user_id = int(data["user_id"])
+    except (ValueError, TypeError):
         return jsonify({"error": "url_id and user_id must be integers"}), 400
 
-    if not data or "url_id" not in data or "user_id" not in data or "event_type" not in data or "timestamp" not in data or "details" not in data:
-        return jsonify({"error": "url_id, user_id, event_type, timestamp and details are required"}), 400
-
-    event = Event.create(url_id=data["url_id"], user_id=data["user_id"], event_type=data["event_type"], timestamp=data["timestamp"], details=data["details"])
+    event = Event.create(url_id=url_id, user_id=user_id, event_type=data["event_type"], timestamp=datetime.now(timezone.utc), details=str(data.get("details", "")))
     return jsonify(model_to_dict(event)), 201
 
 @events_bp.route("/events/<int:event_id>", methods=["GET"])
