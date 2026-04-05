@@ -41,9 +41,36 @@ services:
              uv run python -m app.scripts.load_data"
     restart: "no"
 
-  app1:
+  app1: &app-defaults
     build: .
     restart: unless-stopped
+    stop_signal: SIGTERM
+    stop_grace_period: 5s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 1
+      start_period: 15s
+    environment:
+      DATABASE_NAME: hackathon_db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      init:
+        condition: service_completed_successfully
+
+
+  app2: &app-defaults
+    build: .
+    restart: unless-stopped
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 5s
@@ -62,30 +89,11 @@ services:
       init:
         condition: service_completed_successfully
 
-  app2:
+  app3: &app-defaults
     build: .
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    environment:
-      DATABASE_NAME: hackathon_db
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: postgres
-      DATABASE_HOST: db
-      DATABASE_PORT: 5432
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      db:
-        condition: service_healthy
-      init:
-        condition: service_completed_successfully
-
-  app3:
-    build: .
-    restart: unless-stopped
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 5s
@@ -105,9 +113,11 @@ services:
         condition: service_completed_successfully
 
 
-  app4:
+  app4: &app-defaults
     build: .
     restart: unless-stopped
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 5s
@@ -126,9 +136,11 @@ services:
       init:
         condition: service_completed_successfully
 
-  app5:
+  app5: &app-defaults
     build: .
     restart: unless-stopped
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 5s
@@ -147,9 +159,11 @@ services:
       init:
         condition: service_completed_successfully
 
-  app6:
+  app6: &app-defaults
     build: .
     restart: unless-stopped
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 5s
