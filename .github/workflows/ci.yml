@@ -32,6 +32,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@latest
+      - uses: astral-sh/setup-uv@v0.10.0
       - run: uv sync
       - run: uv run pytest --cov=app --cov-report=term-missing --cov-fail-under=50
