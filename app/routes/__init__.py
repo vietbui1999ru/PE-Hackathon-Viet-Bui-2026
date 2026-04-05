@@ -3,5 +3,5 @@ def register_routes(app):
 
     Add your blueprints here. Example:
     """
-    from app.routes.products import products_bp
-    app.register_blueprint(products_bp)
+    from app.routes.users import users_bp
+    app.register_blueprint(users_bp)

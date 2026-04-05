@@ -1,5 +1,4 @@
-# Import your models here so Peewee registers them.
-# Example:
-from app.models.product import Product
-
-db.create_tables([Product])
+from app.models.users import User
+from app.models.urls import Url
+from app.models.events import Event
+# 
