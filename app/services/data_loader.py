@@ -10,15 +10,19 @@ def load_model_from_csv(filepath : str, model, unique_columns=None):
         reader = csv.DictReader(f)
         rows = list(reader)
 
+    count = 0
     with db.atomic():
         for batch in chunked(rows, 100):
+            count += len(batch)
             model.insert_many(batch).on_conflict_ignore().execute()
 
+    return count
+
 def load_users(filepath: str):
-    load_model_from_csv(filepath, User, unique_columns=["id", "username", "email"])
+    return load_model_from_csv(filepath, User, unique_columns=["id", "username", "email"])
 
 def load_urls(filepath: str):
-    load_model_from_csv(filepath, Url, unique_columns=["id", "short_code"])
+    return load_model_from_csv(filepath, Url, unique_columns=["id", "short_code"])
 
 def load_events(filepath: str):
-    load_model_from_csv(filepath, Event, unique_columns=["id"])
+    return load_model_from_csv(filepath, Event, unique_columns=["id"])

@@ -7,6 +7,8 @@ from playhouse.shortcuts import model_to_dict
 from app.models.urls import Url
 from app.models.events import Event
 
+from peewee import IntegrityError
+
 urls_bp = Blueprint("urls", __name__)
 
 
@@ -43,10 +45,13 @@ def create_url():
         if Url.get_or_none(Url.short_code == data["short_code"]):
             return jsonify({"error": "short code already exist"}), 400
 
-    url = Url.create(original_url=data["original_url"], 
+    try:
+        url = Url.create(original_url=data["original_url"], 
                      title=data["title"] if "title" in data else None,
                      user_id=data["user_id"] if "user_id" in data else None,
                      short_code=uuid.uuid4().hex[:8] if "short_code" not in data else data["short_code"])
+    except IntegrityError:
+        return jsonify({"error": "Url already exists"}), 409
     return jsonify(model_to_dict(url)), 201
 
 @urls_bp.route("/urls/<int:url_id>", methods=["GET"])
@@ -93,9 +98,10 @@ def bulk_load_urls():
         return jsonify({"error": "File not found"}), 404
     from app.services.data_loader import load_urls
     from app.database import db
-    load_urls(filepath)
-    db.execute_sql("SELECT setval('urls_id_seq', (SELECT MAX(id) FROM urls))")
-    return jsonify({"status": "loaded"}), 200
+    result = load_urls(filepath)
+    if os.environ.get("DATABASE_NAME"):  # postgres only
+        db.execute_sql("SELECT setval('urls_id_seq', (SELECT MAX(id) FROM urls))")
+    return jsonify({"status": "loaded", "imported": result}), 200
 
 @urls_bp.route("/urls/<string:short_code>/redirect", methods=["GET"])
 def redirect_url(short_code):

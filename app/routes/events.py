@@ -11,12 +11,21 @@ events_bp = Blueprint("events", __name__)
 @events_bp.route("/events")
 def list_events():
     # add pagination later
-    pages = request.args.get("page", type=int, default=1)
-    per_page = request.args.get("per_page", type=int, default=10)
-
     events = Event.select()
     if pages and per_page:
         events = events.paginate(pages, per_page)
+
+    if request.args.get("user_id"):
+        user_id = request.args.get("user_id")
+        events = events.where(Event.user_id == int(user_id))
+
+    if request.args.get("url_id"):
+        url_id = request.args.get("url_id")
+        events = events.where(Event.url_id == int(url_id))
+
+    if request.args.get("event_type"):
+        event_type = request.args.get("event_type")
+        events = events.where(Event.event_type == event_type)
     # model_to_dict return controlled fields for each e in events
     return jsonify({"data" : [model_to_dict(e) for e in events]})
 
@@ -81,6 +90,7 @@ def bulk_load_events():
         return jsonify({"error": "File not found"}), 404
     from app.services.data_loader import load_events
     from app.database import db
-    load_events(filepath)
-    db.execute_sql("SELECT setval('events_id_seq', (SELECT MAX(id) FROM events))")
-    return jsonify({"status": "loaded"}), 200
+    result = load_events(filepath)
+    if os.environ.get("DATABASE_NAME"):  # postgres only
+        db.execute_sql("SELECT setval('events_id_seq', (SELECT MAX(id) FROM events))")
+    return jsonify({"status": "loaded", "imported": result}), 200

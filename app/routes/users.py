@@ -1,6 +1,7 @@
 from flask.globals import request
 from flask import Blueprint, jsonify
 from playhouse.shortcuts import model_to_dict
+from peewee import IntegrityError
 
 from app.models.users import User
 
@@ -38,7 +39,10 @@ def create_user():
     if not data or "username" not in data or "email" not in data:
         return jsonify({"error": "username and email are required"}), 400
 
-    user = User.create(username=data["username"], email=data["email"])
+    try:
+        user = User.create(username=data["username"], email=data["email"])
+    except IntegrityError:
+        return jsonify({"error": "User already exists"}), 409
     return jsonify(model_to_dict(user, only=[User.id, User.username, User.email, User.created_at])), 201
 
 """
@@ -88,8 +92,8 @@ def bulk_load_users():
         return jsonify({"error": "File not found"}), 404
     from app.services.data_loader import load_users
     from app.database import db
-    load_users(filepath)
+    result = load_users(filepath)
     from app.database import db
     if os.environ.get("DATABASE_NAME"):  # postgres only
         db.execute_sql("SELECT setval('users_id_seq', (SELECT MAX(id) FROM users))")
-    return jsonify({"status": "loaded"}), 200
+    return jsonify({"status": "loaded", "imported": result}), 200
