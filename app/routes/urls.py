@@ -12,13 +12,15 @@ urls_bp = Blueprint("urls", __name__)
 @urls_bp.route("/urls", methods=["GET"])
 def list_urls():
     # add pagination later
-    page = request.args.get("page", type=int, default=1)
-    per_page = request.args.get("per_page", type=int, default=10)
-    urls = Url.select()
-    if page and per_page:
-        urls = urls.paginate(page, per_page)
-    # model_to_dict return controlled fields for each u in users
-    return jsonify({"data" : [model_to_dict(u) for u in urls]})
+    query = Url.select()
+    if request.args.get("is_active"):
+        is_active = request.args.get("is_active").lower() == "true"
+        query = query.where(Url.is_active == is_active)
+    if request.args.get("user_id"):
+        user_id = request.args.get("user_id")
+        query = query.where(Url.user_id == int(user_id))
+    # model_to_dict return controlled fields for each u in urls
+    return jsonify({"data" : [model_to_dict(u) for u in urls_query]})
 
 @urls_bp.route("/urls", methods=["POST"])
 def create_url():
@@ -83,3 +85,12 @@ def bulk_load_urls():
     load_urls(filepath)
     db.execute_sql("SELECT setval('urls_id_seq', (SELECT MAX(id) FROM urls))")
     return jsonify({"status": "loaded"}), 200
+
+@urls_bp.route("/urls/<string:short_code>/redirect", methods=["GET"])
+
+def redirect_url(short_code):
+    from flask import redirect
+    url = Url.get_or_none(Url.short_code == short_code, Url.is_active == True)
+    if not url:
+        return jsonify({"error": "not found"}), 404
+    return redirect(url.original_url, code=302)
