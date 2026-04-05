@@ -22,19 +22,25 @@ def require_env(environment : str) -> str:
     return variables
 
 def init_db(app):
+    db_name = os.environ.get("DATABASE_NAME")
+    db_user = os.environ.get("DATABASE_USER")
+    db_password = os.environ.get("DATABASE_PASSWORD")
+    db_host = os.environ.get("DATABASE_HOST", "localhost")
+    db_port = int(os.environ.get("DATABASE_PORT", 5432))
 
-    database = PostgresqlDatabase(
-            # require environment wth db_name
-            require_env("DATABASE_NAME"),
-            # allow  change of host, defaults to localhost
-            host=os.environ.get("DATABASE_HOST", "localhost"),
-            # allow change of port, defaults to 5432
-            port=int(os.environ.get("DATABASE_PORT", 5432)),
-            # require environment wth db_user
-            user=require_env("DATABASE_USER"),
-            # require environment wth db_password DO NOT EXPOSE.
-            password=require_env("DATABASE_PASSWORD"),
-    )
+    if db_name and db_user and db_password:
+        database = PostgresqlDatabase(
+            db_name,
+            host=db_host,
+            port=db_port,
+            user=db_user,
+            password=db_password,
+        )
+        app.config["DB_BACKEND"] = "postgres"
+    else:
+        database = SqliteDatabase("local_dev.db")
+        app.config["DB_BACKEND"] = "sqlite"
+
     db.initialize(database)
 
     @app.before_request
