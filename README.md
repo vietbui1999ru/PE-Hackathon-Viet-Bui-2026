@@ -1,192 +1,84 @@
-# MLH PE Hackathon — Flask + Peewee + PostgreSQL Template
+# MLH PE Hackathon 2026 — URL Shortener with SRE Practices
 
-A minimal hackathon starter template. You get the scaffolding and database wiring — you build the models, routes, and CSV loading logic.
-
-**Stack:** Flask · Peewee ORM · PostgreSQL · uv
-
-## **Important**
-
-You need to work with around the seed files that you can find in [MLH PE Hackathon](https://mlh-pe-hackathon.com) platform. This will help you build the schema for the database and have some data to do some testing and submit your project for judging. If you need help with this, reach out on Discord or on the Q&A tab on the platform.
-
-## Prerequisites
-
-- **uv** — a fast Python package manager that handles Python versions, virtual environments, and dependencies automatically.
-  Install it with:
-  ```bash
-  # macOS / Linux
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-
-  # Windows (PowerShell)
-  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-  ```
-  For other methods see the [uv installation docs](https://docs.astral.sh/uv/getting-started/installation/).
-- PostgreSQL running locally (you can use Docker or a local instance)
-
-## uv Basics
-
-`uv` manages your Python version, virtual environment, and dependencies automatically — no manual `python -m venv` needed.
-
-| Command | What it does |
-|---------|--------------|
-| `uv sync` | Install all dependencies (creates `.venv` automatically) |
-| `uv run <script>` | Run a script using the project's virtual environment |
-| `uv add <package>` | Add a new dependency |
-| `uv remove <package>` | Remove a dependency |
-
-## Quick Start
-
-```bash
-# 1. Clone the repo
-git clone <repo-url> && cd mlh-pe-hackathon
-
-# 2. Install dependencies
-uv sync
-
-# 3. Create the database
-createdb hackathon_db
-
-# 4. Configure environment
-cp .env.example .env   # edit if your DB credentials differ
-
-# 5. Run the server
-uv run run.py
-
-# 6. Verify
-curl http://localhost:5000/health
-# → {"status":"ok"}
-```
-
-## Project Structure
-
-```
-mlh-pe-hackathon/
-├── app/
-│   ├── __init__.py          # App factory (create_app)
-│   ├── database.py          # DatabaseProxy, BaseModel, connection hooks
-│   ├── models/
-│   │   └── __init__.py      # Import your models here
-│   └── routes/
-│       └── __init__.py      # register_routes() — add blueprints here
-├── .env.example             # DB connection template
-├── .gitignore               # Python + uv gitignore
-├── .python-version          # Pin Python version for uv
-├── pyproject.toml           # Project metadata + dependencies
-├── run.py                   # Entry point: uv run run.py
-└── README.md
-```
-
-## How to Add a Model
-
-1. Create a file in `app/models/`, e.g. `app/models/product.py`:
-
-```python
-from peewee import CharField, DecimalField, IntegerField
-
-from app.database import BaseModel
+---
 
 
-class Product(BaseModel):
-    name = CharField()
-    category = CharField()
-    price = DecimalField(decimal_places=2)
-    stock = IntegerField()
-```
+<p align="center">
+<a href="https://www.youtube.com/watch?v=zFr2aNbNSyI">Live Demo of our submission</a>
+</p>
 
-2. Import it in `app/models/__init__.py`:
+## What We Built and Tested
 
-```python
-from app.models.product import Product
-```
+A URL shortener service with full SRE practices layered on top:
 
-3. Create the table (run once in a Python shell or a setup script):
+- [x] **REST API** — Flask + Peewee ORM + PostgreSQL with full CRUD for users, URLs, 
+  and click events
+- [x] **Reliability** — 30 pytest tests, 66% code coverage, CI/CD via GitHub Actions 
+  that blocks deploys on test failure
+- [x] **Scalability** — 6 Gunicorn app instances behind Nginx load balancer, Redis 
+  caching, connection pooling
+- [!] **Observability** — Structured JSON logging, Prometheus metrics, Grafana dashboards 
+  tracking the four golden signals, Alertmanager with Discord notifications
+- [x] **Chaos Engineering** — Docker restart policies, graceful shutdown with SIGTERM 
+  drain, zero-downtime rolling restarts
 
-```python
-from app.database import db
-from app.models.product import Product
+---
 
-db.create_tables([Product])
-```
+## How we approached the challenge
 
-## How to Add Routes
+We followed the template and instructions from the official MLH challenge template on Github. Starting with a Flask + Peewee template, we first focused on getting the data model right — three tables (`users`, `urls`, `events`) with proper relationships and a bulk CSV loader for seed data. After getting the endpoints and relationships figured out, we started implementing incremental unit tests on our local machines. 
 
-1. Create a blueprint in `app/routes/`, e.g. `app/routes/products.py`:
+For scalability, we learned that Flask's development server is single-threaded so if we scaled from 50 to 500 concurrent users, the server would produce a 100% error rate. We found a package to use multi-thread workers called Gunicorn and used 4 workers and 2 threads per container for the k6 tests. Leveraging Nginx load balancing with 6 containers behind, also in addition to redis caching and connection pool for url data with expiration times, dropped errors 
+to 0% at 500 VUs with p95 latency of 200ms. 
 
-```python
-from flask import Blueprint, jsonify
-from playhouse.shortcuts import model_to_dict
+The load test math:
 
-from app.models.product import Product
+$$\text{Total connections} = N_{\text{apps}} \times C_{\text{pool}} = 6 \times 15 = 90$$
 
-products_bp = Blueprint("products", __name__)
+$$\text{Safety margin} = \frac{\text{max\_connections} - \text{total\_connections}}{\text{max\_connections}} = \frac{500 - 90}{500} = 82\%$$
 
+Keeping total pool connections well under Postgres `max_connections` eliminated 
+the "too many clients" errors that caused 45% failure rate at 200 connections.
 
-@products_bp.route("/products")
-def list_products():
-    products = Product.select()
-    return jsonify([model_to_dict(p) for p in products])
-```
+Redis caching on `GET /urls/<id>` meant most requests never touched the database:
 
-2. Register it in `app/routes/__init__.py`:
+$$\text{Cache hit rate} \approx \frac{\text{cached requests}}{\text{total requests}} \rightarrow \text{DB load} \propto (1 - \text{hit rate})$$
 
-```python
-def register_routes(app):
-    from app.routes.products import products_bp
-    app.register_blueprint(products_bp)
-```
+---
 
-## How to Load CSV Data
+## Challenges that we faced
 
-```python
-import csv
-from peewee import chunked
-from app.database import db
-from app.models.product import Product
+- Database sequence desync was the most recurring bug. Every time CI loaded seed 
+data, subsequent inserts would collide on the primary key. The root cause was 
+`INSERT ... VALUES (explicit_id)` didn't update the sequence counter. We found that 
+always calling `setval` after bulk loads would resolve the issue.
 
-def load_csv(filepath):
-    with open(filepath, newline="") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
+- Docker networking caused hours of debugging. Nginx couldn't resolve `app1:5000` 
+because it started before the app containers were healthy. The fix was 
+`condition: service_healthy` in `depends_on` combined with proper healthchecks.
 
-    with db.atomic():
-        for batch in chunked(rows, 100):
-            Product.insert_many(batch).execute()
-```
+- Flask dev server bottleneck was invisible until load testing. The single-threaded 
+server serialized every request, so 500 VUs meant 499 were always waiting. We immediately thought of using workers to utilize multi-threading and concurrency.
 
-## Useful Peewee Patterns
+- Connection pool exhaustion** at 6 apps × 20 connections > Postgres default 100 
+max_connections. The fix that we implemented was just scaling horizontally by increasing server capacity 
+and reduce per-client pool size to stay within limits.
 
-```python
-from peewee import fn
-from playhouse.shortcuts import model_to_dict
+---
 
-# Select all
-products = Product.select()
+## What we Learned
 
-# Filter
-cheap = Product.select().where(Product.price < 10)
+- Measure before optimizing: every bottleneck we fixed was invisible until k6 
+  showed me the data.
+- The DB is usually the bottleneck: caching, pooling, and connection limits all 
+  point back to the database.
+- Idempotent scripts can reduce headaches: `on_conflict_ignore`, `safe=True`, `setval` 
+  after bulk loads really made managing DB easier.
+- Restart policies are more complex than we thought: graceful shutdown requires the app to handle 
+  SIGTERM, drain connections, and exit cleanly.
 
-# Get by ID
-p = Product.get_by_id(1)
+---
 
-# Create
-Product.create(name="Widget", category="Tools", price=9.99, stock=50)
+## Tech Stack
+We used Flask, Peewee for the API configurations. PostgreSQL for database, and Redis for caching recent data. We used Nginx for load balancing, with combination of Gunicorn, k6 for measuring scalability and distribution for horizontal scaling. We tried to add Prometheus + Grafana for Monitoring stack as well as Discord + Alertmanager. We used Github Actions for automated CI/CD on Github. Docker for containerization, and pytest, pytest-cov for unit testing and coverage testing.
 
-# Convert to dict (great for JSON responses)
-model_to_dict(p)
-
-# Aggregations
-avg_price = Product.select(fn.AVG(Product.price)).scalar()
-total = Product.select(fn.SUM(Product.stock)).scalar()
-
-# Group by
-from peewee import fn
-query = (Product
-         .select(Product.category, fn.COUNT(Product.id).alias("count"))
-         .group_by(Product.category))
-```
-
-## Tips
-
-- Use `model_to_dict` from `playhouse.shortcuts` to convert model instances to dictionaries for JSON responses.
-- Wrap bulk inserts in `db.atomic()` for transactional safety and performance.
-- The template uses `teardown_appcontext` for connection cleanup, so connections are closed even when requests fail.
-- Check `.env.example` for all available configuration options.
